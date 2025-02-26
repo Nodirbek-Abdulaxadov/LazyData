@@ -2,29 +2,35 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
-namespace LazyData;
+namespace LazyData.Excel;
 
-public static class ExcelWorker
+public static partial class ExcelWorker
 {
-    public static MemoryStream ToStream<T>(IEnumerable<T> source) where T : class
+    /// <summary>
+    /// Generates a Excel from a collection of data and returns it as a MemoryStream.
+    /// </summary>
+    /// <typeparam name="T">The type of data objects.</typeparam>
+    /// <param name="data">The collection of data to be converted into a Excel.</param>
+    /// <returns>A MemoryStream containing the generated Excel.</returns>
+    public static MemoryStream ToExcelStream<T>(this IEnumerable<T> source) where T : class
     {
-        MemoryStream memoryStream = new MemoryStream();
+        MemoryStream memoryStream = new();
 
         using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Create(memoryStream, SpreadsheetDocumentType.Workbook))
         {
             // Add a WorkbookPart to the document.
             WorkbookPart workbookPart = spreadsheetDocument.AddWorkbookPart();
-            workbookPart.Workbook = new Workbook();
+            workbookPart.Workbook = new();
 
             // Add a WorksheetPart to the WorkbookPart.
             WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-            worksheetPart.Worksheet = new Worksheet(new SheetData());
+            worksheetPart.Worksheet = new(new SheetData());
 
             // Add Sheets to the Workbook.
             Sheets sheets = workbookPart.Workbook.AppendChild(new Sheets());
 
             // Append a new worksheet and associate it with the workbook.
-            Sheet sheet = new Sheet() { Id = workbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = PluralizationHelper.ToPlural(typeof(T).Name) };
+            Sheet sheet = new() { Id = workbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = PluralizationHelper.ToPlural(typeof(T).Name) };
             sheets.Append(sheet);
 
             SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>()!;
@@ -33,10 +39,10 @@ public static class ExcelWorker
             var properties = typeof(T).GetProperties();
 
             // Add header row
-            Row headerRow = new Row();
+            Row headerRow = new();
             foreach (var property in properties)
             {
-                Cell headerCell = new Cell() { DataType = CellValues.String, CellValue = new CellValue(property.Name) };
+                Cell headerCell = new() { DataType = CellValues.String, CellValue = new CellValue(property.Name) };
                 headerRow.AppendChild(headerCell);
             }
             sheetData!.AppendChild(headerRow);
@@ -44,7 +50,7 @@ public static class ExcelWorker
             // Add data rows
             foreach (var item in source)
             {
-                Row dataRow = new Row();
+                Row dataRow = new();
                 foreach (var property in properties)
                 {
                     var value = property.GetValue(item);
@@ -63,15 +69,15 @@ public static class ExcelWorker
                             dataType = CellValues.Number;
                             cellValue = Convert.ToDouble(value).ToString(System.Globalization.CultureInfo.InvariantCulture);
                         }
-                        else if (value is bool)
+                        else if (value is bool boolValue)
                         {
                             dataType = CellValues.Boolean;
-                            cellValue = (bool)value ? "1" : "0";
+                            cellValue = boolValue ? "1" : "0";
                         }
-                        else if (value is DateTime)
+                        else if (value is DateTime dateTimeValue)
                         {
                             dataType = CellValues.Date;
-                            cellValue = ((DateTime)value).ToOADate().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            cellValue = dateTimeValue.ToOADate().ToString(System.Globalization.CultureInfo.InvariantCulture);
                         }
                         else
                         {
@@ -79,7 +85,7 @@ public static class ExcelWorker
                         }
                     }
 
-                    Cell dataCell = new Cell() { DataType = dataType, CellValue = new CellValue(cellValue) };
+                    Cell dataCell = new() { DataType = dataType, CellValue = new(cellValue) };
                     dataRow.AppendChild(dataCell);
                 }
                 sheetData.AppendChild(dataRow);
@@ -93,16 +99,41 @@ public static class ExcelWorker
         return memoryStream;
     }
 
-    public static void SaveAsExcelFile<T>(this IEnumerable<T> source, string path) where T : class
+    /// <summary>
+    /// Converts a given data collection into a Excel byte array.
+    /// </summary>
+    /// <typeparam name="T">The type of data objects.</typeparam>
+    /// <param name="data">The collection of data to be converted into a Excel.</param>
+    /// <returns>A byte array containing the generated Excel.</returns>
+    public static byte[] ToExcelByteArray<T>(this IEnumerable<T> source) where T : class
     {
-        // Generate Excel document
-        using (MemoryStream stream = ToStream(source))
+        using var memoryStream = new MemoryStream();
+        string tempPath = Path.GetTempFileName();
+
+        try
         {
-            // Save Excel document to file
-            using (FileStream fileStream = new FileStream(path, FileMode.Create))
+            SaveAsExcelFile(source, tempPath);
+            return File.ReadAllBytes(tempPath);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
             {
-                stream.WriteTo(fileStream);
+                File.Delete(tempPath);
             }
         }
+    }
+
+    /// <summary>
+    /// Saves a given data collection as a Excel file at the specified path.
+    /// </summary>
+    /// <typeparam name="T">The type of data objects.</typeparam>
+    /// <param name="data">The collection of data to be written to the Excel.</param>
+    /// <param name="filePath">The file path where the Excel will be saved.</param>
+    public static void SaveAsExcelFile<T>(this IEnumerable<T> source, string path) where T : class
+    {
+        using MemoryStream stream = ToExcelStream(source);
+        using FileStream fileStream = new(path, FileMode.Create);
+        stream.WriteTo(fileStream);
     }
 }

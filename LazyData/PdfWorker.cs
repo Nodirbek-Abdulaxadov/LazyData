@@ -7,21 +7,24 @@ namespace LazyData;
 
 public static class PDFWorker
 {
-    public static MemoryStream GeneratePDFDocument<T>(IEnumerable<T> data) where T : class
+    /// <summary>
+    /// Generates a PDF from a collection of data and returns it as a MemoryStream.
+    /// </summary>
+    /// <typeparam name="T">The type of data objects.</typeparam>
+    /// <param name="data">The collection of data to be converted into a PDF.</param>
+    /// <returns>A MemoryStream containing the generated PDF.</returns>
+    public static MemoryStream ToPdfStrem<T>(this IEnumerable<T> data) where T : class
     {
-        MemoryStream memoryStream = new MemoryStream();
+        MemoryStream memoryStream = new();
         string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".pdf");
 
-        // Saqlash PDF fayliga
         SaveAsPdfFile(data, tempPath);
 
-        // PDF faylni oqish
-        using (FileStream fileStream = new FileStream(tempPath, FileMode.Open, FileAccess.Read))
+        using (FileStream fileStream = new(tempPath, FileMode.Open, FileAccess.Read))
         {
             fileStream.CopyTo(memoryStream);
         }
 
-        // Vaqtinchalik faylni o'chirish
         if (File.Exists(tempPath))
         {
             File.Delete(tempPath);
@@ -31,7 +34,38 @@ public static class PDFWorker
         return memoryStream;
     }
 
-    public static void SaveAsPdfFile<T>(IEnumerable<T> data, string filePath) where T : class
+    /// <summary>
+    /// Converts a given data collection into a PDF byte array.
+    /// </summary>
+    /// <typeparam name="T">The type of data objects.</typeparam>
+    /// <param name="data">The collection of data to be converted into a PDF.</param>
+    /// <returns>A byte array containing the generated PDF.</returns>
+    public static byte[] ToPdfByteArray<T>(this IEnumerable<T> data) where T : class
+    {
+        using var memoryStream = new MemoryStream();
+        string tempPath = Path.GetTempFileName();
+
+        try
+        {
+            SaveAsPdfFile(data, tempPath);
+            return File.ReadAllBytes(tempPath);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Saves a given data collection as a PDF file at the specified path.
+    /// </summary>
+    /// <typeparam name="T">The type of data objects.</typeparam>
+    /// <param name="data">The collection of data to be written to the PDF.</param>
+    /// <param name="filePath">The file path where the PDF will be saved.</param>
+    public static void SaveAsPdfFile<T>(this IEnumerable<T> data, string filePath) where T : class
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
