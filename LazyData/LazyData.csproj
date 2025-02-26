@@ -4,11 +4,26 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>LazyData0</PackageId>
+    <Title>Easy way Export&amp;Import with Excel, Word, Pdf</Title>
+    <Company>MDevs Group</Company>
+    <Description>LazyData0 is a powerful yet lightweight C# library designed to simplify Excel, PDF, and Word document handling. Whether you need to generate reports, extract structured data, or automate document workflows, LazyData0 provides an easy-to-use API for exporting and importing data across multiple file formats.</Description>
+    <PackageReadmeFile>Readme.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/Nodirbek-Abdulaxadov/LazyData</RepositoryUrl>
+    <PackageTags>dotnet, csharp, excel, pdf, word, export, import</PackageTags>
+    <Authors>Nodirbek Abdulakhadov</Authors>
   </PropertyGroup>
 	
 	<ItemGroup>
 		<PackageReference Include="DocumentFormat.OpenXml" Version="3.0.2" />
 		<PackageReference Include="QuestPDF" Version="2024.3.10" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <None Update="Readme.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
 	</ItemGroup>
 
 </Project>
